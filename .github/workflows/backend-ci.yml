@@ -32,10 +32,10 @@ jobs:
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@v3
         with:
-          projectBaseDir: expensy_backend
+          projectBaseDir: expensy_frontend
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_ORGANIZATION: musaxasmammedov7      # ← измени
+          SONAR_ORGANIZATION: musaxasmammedov7
           SONAR_PROJECT_KEY: musa2
 
       # ── 3. Snyk dependency scan ───────────────────────────────────────────
