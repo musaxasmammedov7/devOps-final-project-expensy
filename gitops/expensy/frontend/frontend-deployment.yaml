@@ -34,7 +34,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: frontend
-          image: docker.io/mmusa7/expensy-frontend:latest
+          image: docker.io/mmusa7/expensy-frontend:PLACEHOLDER
           ports:
             - containerPort: 3000
               name: http

@@ -122,7 +122,7 @@ jobs:
       - name: Update image tag in GitOps manifest
         env:
           GIT_SHA: ${{ github.sha }}
-          MANIFEST: gitops/expensy/backend-deployment.yaml
+          MANIFEST: gitops/expensy/backend/backend-deployment.yaml
         run: |
           if [ ! -f "$MANIFEST" ]; then
             echo "::warning::$MANIFEST not found — skipping GitOps update."

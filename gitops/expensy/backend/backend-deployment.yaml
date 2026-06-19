@@ -35,7 +35,7 @@ spec:
       containers:
         - name: backend
           # CI updates this tag automatically via commit
-          image: docker.io/mmusa7/expensy-backend:latest
+          image: docker.io/mmusa7/expensy-backend:PLACEHOLDER
           ports:
             - containerPort: 8706
               name: http
