@@ -30,12 +30,16 @@ jobs:
 
       # -- 2. SonarCloud
      
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
+      - name: Analyze Frontend with SonarCloud
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          projectBaseDir: expensy_frontend
+          args: >
+            -Dsonar.projectKey=musaxasmammedov7_frontend
+            -Dsonar.organization=musaxasmammedov7
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_ORGANIZATION: musaxasmammedov7      
-          SONAR_PROJECT_KEY: musa2
 
       # ── 3. Snyk dependency scan ───────────────────────────────────────────
       - name: Snyk – Scan dependencies
