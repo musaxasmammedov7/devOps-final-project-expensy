@@ -244,12 +244,14 @@ else
 fi
 
 info "Applying Argo CD install manifest (stable)..."
-kubectl apply --server-side --force-conflicts \
-  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+kubectl apply -n argocd --server-side -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+
 info "Waiting for Argo CD deployments to become available..."
 kubectl rollout status deployment/argocd-repo-server          -n argocd --timeout=180s
 kubectl rollout status deployment/argocd-server               -n argocd --timeout=180s
-kubectl rollout status deployment/argocd-application-controller -n argocd --timeout=180s
+kubectl rollout status statefulset/argocd-application-controller -n argocd --timeout=180s
 
 success "Argo CD is fully up and running."
 echo ""

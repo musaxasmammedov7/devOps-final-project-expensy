@@ -28,16 +28,15 @@ jobs:
         with:
           fetch-depth: 0   # full history needed by SonarCloud
 
-      # ── 2. SonarCloud scan ────────────────────────────────────────────────
+      # -- 2. SonarCloud
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@v3
         with:
-          projectBaseDir: expensy_frontend
+          projectBaseDir: expensy_frontend          # ← это правильно
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          # Replace these two values with your actual SonarCloud org/project:
-          SONAR_ORGANIZATION: YOUR_SONARCLOUD_ORG_KEY
-          SONAR_PROJECT_KEY: YOUR_SONARCLOUD_PROJECT_KEY_FRONTEND
+          SONAR_ORGANIZATION: musaxasmammedov7      # ← измени
+          SONAR_PROJECT_KEY: musa2
 
       # ── 3. Snyk dependency scan ───────────────────────────────────────────
       - name: Snyk – Scan dependencies
