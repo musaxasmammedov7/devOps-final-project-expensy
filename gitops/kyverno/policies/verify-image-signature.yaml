@@ -1,0 +1,38 @@
+# ВАЖНО: замените плейсхолдер на реальное содержимое файла gitops/argocd/cosign.pub (публичный ключ Cosign,
+# сгенерированный в install-argocd.sh). Публичный ключ можно коммитить в Git — это не секрет, секрет это cosign.key
+# (приватный), который никогда не должен попадать в Git. Вставьте полное содержимое .pub файла, начиная с
+# '-----BEGIN PUBLIC KEY-----' и заканчивая '-----END PUBLIC KEY-----', с сохранением переводов строк
+# (используйте YAML multi-line строку через | синтаксис).
+# yaml-language-server: $schema=https://www.schemastore.org/any.json
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signature
+  annotations:
+    policies.kyverno.io/title: Verify Image Signature
+    policies.kyverno.io/category: Software Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Политика проверяет наличие валидной подписи Cosign для всех образов,
+      публикуемых в репозиторий проекта expensy.
+spec:
+  # validationFailureAction установлен в Audit для первоначального логирования
+  # без блокировки деплоев до подстановки реального ключа и тестирования.
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: verify-signature
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      verifyImages:
+        - imageReferences:
+            - "docker.io/mmusa7/expensy-*" 
+          mutateDigest: true
+          attestors:
+            - entries:
+                - keys:
+                    publicKeys: |
+                      <ВСТАВИТЬ_СОДЕРЖИМОЕ_cosign.pub>

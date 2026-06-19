@@ -1,0 +1,27 @@
+# Helm values for Jaeger
+provisionDataStore:
+  cassandra: false
+  elasticsearch: false
+
+allInOne:
+  enabled: true
+
+# Configures persistent storage for Jaeger using badger db (embedded database)
+# This is appropriate for local lab/course development. In production, Elasticsearch or Cassandra should be used.
+storage:
+  type: badger
+  badger:
+    ephemeral: false
+    directory: /badger/data # Persistent storage directory inside container
+
+persistence:
+  enabled: true
+  size: 2Gi
+  storageClassName: local-path
+
+collector:
+  service:
+    otlp:
+      grpc:
+        enabled: true
+

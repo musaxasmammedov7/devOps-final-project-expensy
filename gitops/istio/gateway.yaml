@@ -1,0 +1,26 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: expensy-gateway
+  namespace: expensy
+spec:
+  selector:
+    istio: ingressgateway # Default Istio ingress gateway
+  servers:
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: expensy-tls-cert # Stored in istio-system namespace
+      hosts:
+        - "security-duly-outrage.ngrok-free.dev"
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      tls:
+        httpsRedirect: true
+      hosts:
+        - "security-duly-outrage.ngrok-free.dev"

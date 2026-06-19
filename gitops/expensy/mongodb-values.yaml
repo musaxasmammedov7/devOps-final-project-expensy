@@ -1,0 +1,33 @@
+# Использование существующего секрета, сгенерированного External Secrets Operator.
+auth:
+  rootUser: root
+  existingSecret: mongodb-root-password-secret
+
+architecture: standalone
+
+persistence:
+  enabled: true
+  storageClass: local-path
+  size: 3Gi
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+serviceAccount:
+  # MongoDB не вызывает Kubernetes API, токен ServiceAccount не нужен — отключаем монтирование, чтобы при компрометации контейнера атакующий не получил токен с правами в Kubernetes API
+  automountServiceAccountToken: false
+
+fullnameOverride: expensy-mongo
+
+# Bitnami MongoDB chart поддерживает встроенный sidecar-exporter (prometheus-mongodb-exporter) внутри того же Pod — metrics.enabled: true добавляет этот sidecar автоматически, без необходимости ставить отдельный Helm release. metrics.serviceMonitor.enabled: true заставляет чарт самостоятельно создать ServiceMonitor ресурс (нужен Prometheus Operator CRD в кластере — он уже есть благодаря kube-prometheus-stack). namespace: monitoring указывает, в каком namespace создать сам ServiceMonitor объект — ставим в monitoring, где живёт Prometheus, а не в expensy, для логичного разделения 'инфраструктура мониторинга' vs 'само приложение'.
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+    interval: 30s

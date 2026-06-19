@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=https://www.schemastore.org/any.json
+
+driver:
+  kind: modern_ebpf
+
+# Falco core configuration.
+falco:
+  # JSON output обязателен для Falcosidekick — он парсит JSON, а не plain text.
+  jsonOutput: true
+  jsonIncludeOutputProperty: true
+  # HTTP output отправляет events по HTTP на Falcosidekick.
+  httpOutput:
+    enabled: true
+    url: ""
+    # Falco автоматически определяет URL Falcosidekick, если он запущен как subchart.
+  # Логирование в stdout для удобства отладки через kubectl logs.
+  logSyslog: false
+  logLevel: info
+
+
+customRules:
+  expensy-rules.yaml: |-
+
+    - rule: Interactive Shell in Expensy Namespace
+      desc: >
+        Обнаружен запуск интерактивного shell (bash, sh, zsh, csh, ksh)
+        внутри контейнера в namespace expensy. Это может быть признаком
+        несанкционированного доступа или попытки выполнения команд
+        злоумышленником после эксплуатации уязвимости (post-exploitation).
+      condition: >
+        spawned_process
+        and container
+        and k8s.ns.name = "expensy"
+        and proc.name in (bash, sh, zsh, csh, ksh, dash)
+        and proc.tty != 0
+      output: >
+        ALERT: Interactive shell opened in expensy namespace
+        (user=%user.name pod=%k8s.pod.name container=%container.name
+        shell=%proc.name parent=%proc.pname cmdline=%proc.cmdline
+        namespace=%k8s.ns.name image=%container.image.repository:%container.image.tag)
+      priority: WARNING
+      tags:
+        - shell
+        - expensy
+        - runtime_security
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                       FALCOSIDEKICK SETTINGS                            ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+falcosidekick:
+  # Включить Falcosidekick как subchart.   
+  enabled: true
+
+  config:
+  
+    existingSecret: falco-smtp-secret
+
+    # ── Минимальный приоритет алертов для форвардинга ──
+    # Falcosidekick не будет форвардить алерты ниже этого приоритета.
+    # Шкала приоритетов Falco (от низкого к высокому):
+    #   debug → informational → notice → warning → error → critical → alert → emergency
+    #
+    # warning — это оптимальный баланс: мы получаем алерты о реальных
+    # инцидентах (shell в контейнере, чтение /etc/shadow и др.),
+    # но не тонем в потоке informational/notice событий.
+    minimumpriority: warning
+
+    smtp:
+      # ── SMTP-сервер Gmail ──
+      # Формат: "host:port". Порт 587 — STARTTLS (рекомендуемый).
+      hostport: "smtp.gmail.com:587"
+      # Использовать TLS для шифрования соединения.
+      tls: true
+      # Механизм аутентификации: plain (логин + пароль).
+      authmechanism: "plain"
+      # Адрес отправителя.
+      from: "musaxasmammedov77@gmail.com"
+      # Адрес получателя алертов.
+      to: "musaxasmammedov77@gmail.com"
+      # Имя пользователя SMTP (совпадает с адресом Gmail).
+      user: "musaxasmammedov77@gmail.com"
+      # ──────────────────────────────────────────────────────────────────
+      # ПАРОЛЬ НЕ УКАЗЫВАЕТСЯ ЗДЕСЬ!
+      # Он берётся из existingSecret: falco-smtp-secret.
+      # См. gitops/falco/smtp-secret.yaml и gitops/falco/README.md.
+      # ──────────────────────────────────────────────────────────────────
+      # password: "" # <-- НЕ ЗАПОЛНЯТЬ! Используется existingSecret.
+      outputformat: "text"
+      # Тема письма — включает приоритет и правило для быстрой фильтрации.
+      subject: "[Falco] {priority} - {rule}"

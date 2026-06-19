@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - servicemonitor-istio.yaml
+  - dashboards/istio-mesh-dashboard.yaml
+  - dashboards/istio-control-plane-dashboard.yaml
+  - dashboards/istio-performance-dashboard.yaml
+  - dashboards/istio-service-dashboard.yaml
+  - dashboards/mongodb-dashboard.yaml
+  - dashboards/redis-dashboard.yaml 

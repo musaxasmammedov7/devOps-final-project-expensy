@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import expenseRoutes from './routes/expense.route';
 import connectDB from './config/db.config';
@@ -13,16 +13,21 @@ app.use(bodyParser.json());
 app.use(httpMetricsMiddleware);
 
 // Redirect /api to /api/expenses
-app.get('/api', (req, res) => {
+app.get('/api', (req: Request, res: Response) => {
     res.redirect('/api/expenses');
   });
   
 app.use('/api', expenseRoutes);
 
+// Health probe endpoint for Kubernetes
+app.get('/health', (req: Request, res: Response) => {
+  res.status(200).send('OK');
+});
+
 client.collectDefaultMetrics();
 
 // /metrics endpoint for Prometheus to scrape
-app.get('/metrics', async (req, res) => {
+app.get('/metrics', async (req: Request, res: Response) => {
     try {
         res.set('Content-Type', client.register.contentType);
         const metrics = await client.register.metrics();

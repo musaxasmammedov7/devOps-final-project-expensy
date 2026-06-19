@@ -1,0 +1,24 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: expensy-virtualservice
+  namespace: expensy
+spec:
+  hosts:
+    - "security-duly-outrage.ngrok-free.dev"
+  gateways:
+    - expensy-gateway
+  http:
+    - match:
+        - uri:
+            prefix: /api/
+      route:
+        - destination:
+            host: expensy-backend
+            port:
+              number: 8706
+    - route:
+        - destination:
+            host: expensy-frontend
+            port:
+              number: 3000

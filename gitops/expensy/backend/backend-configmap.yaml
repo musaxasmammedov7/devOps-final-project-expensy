@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: expensy-backend-config
+  namespace: expensy
+data:
+  PORT: "8706"
+  # проверить реальное имя через kubectl get svc -n expensy после первого деплоя, Bitnami может менять схему именования между версиями чарта
+  REDIS_HOST: "expensy-redis-master"
+  REDIS_PORT: "6379"

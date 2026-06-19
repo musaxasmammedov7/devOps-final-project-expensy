@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno
+  namespace: argocd
+  annotations:
+    # sync-wave: "0" — Kyverno controller устанавливается в первой волне
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://kyverno.github.io/kyverno/
+    chart: kyverno
+    # Указываем конкретную стабильную версию 3.2.6.
+    # ВАЖНО: проверить актуальность этой версии на момент установки.
+    targetRevision: 3.2.6
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # Kyverno CRD объекты могут быть большими, server-side apply избегает ошибки
+      # 'metadata.annotations: Too long: must have at most 262144 characters',
+      # типичной для client-side apply больших CRD.
+      - ServerSideApply=true

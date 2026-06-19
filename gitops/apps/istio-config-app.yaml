@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: istio-config
+  namespace: argocd
+  annotations:
+    # sync-wave: "0" — устанавливается в первой волне для подготовки Gateway/VirtualService
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/musaxasmammedov7/devOps-final-project-expensy.git
+    targetRevision: main
+    path: gitops/istio
+    directory:
+      # Exclude the kiali-app.yaml from this Application,
+      # since Kiali has its own dedicated Application manifest
+      exclude: "kiali-app.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: istio-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

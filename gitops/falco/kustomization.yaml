@@ -1,0 +1,10 @@
+# Kustomization для директории gitops/falco/.
+#
+# Этот файл указывает Argo CD, какие raw Kubernetes-манифесты
+# нужно применить из этой директории.
+# Без него Argo CD попытается применить ВСЕ YAML-файлы,
+# включая values.yaml (который не является K8s-манифестом).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - smtp-secret.yaml

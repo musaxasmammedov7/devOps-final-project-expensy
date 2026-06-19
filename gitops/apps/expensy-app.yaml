@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: expensy-apps
+  namespace: argocd
+  annotations:
+    # sync-wave: "3" — основное приложение expensy разворачивается последним
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/musaxasmammedov7/devOps-final-project-expensy.git
+    targetRevision: main
+    path: gitops/expensy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: expensy
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # Страховка, основной способ создания namespace — файл namespace.yaml из gitops/expensy/
+      - CreateNamespace=true

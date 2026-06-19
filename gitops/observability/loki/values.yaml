@@ -1,0 +1,9 @@
+# Helm values for loki-stack
+promtail:
+  enabled: true # Enable Promtail as DaemonSet to collect logs automatically from all nodes
+
+loki:
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClassName: local-path

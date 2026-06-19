@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: expensy-backend
+  namespace: expensy
+  labels:
+    app: expensy-backend
+spec:
+  ports:
+    - port: 8706
+      targetPort: 8706
+      name: http
+  selector:
+    app: expensy-backend
+  type: ClusterIP

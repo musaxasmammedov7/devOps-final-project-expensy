@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=https://www.schemastore.org/any.json
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-non-root
+  annotations:
+    policies.kyverno.io/title: Require Run As Non-Root
+    policies.kyverno.io/category: Pod Security Standards (Baseline)
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Проверяет, что поды в namespace expensy запускаются от имени не-root пользователя.
+      Это обеспечивает базовый уровень изоляции и безопасности контейнеров.
+spec:
+  # validationFailureAction установлен в Audit для логирования нарушений без блокировки деплоя.
+  # После проверки существующих манифестов можно переключить на Enforce.
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: check-run-as-non-root
+      # Правило применяется только к Pod-объектам в namespace expensy
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - expensy
+      validate:
+        message: >-
+          Ошибка: В namespace expensy все поды должны быть настроены на запуск от имени
+          не-root пользователя. В спецификации Pod отсутствует или установлен в false параметр
+          spec.securityContext.runAsNonRoot. Исправьте это, добавив в spec.securityContext:
+          runAsNonRoot: true. 
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true

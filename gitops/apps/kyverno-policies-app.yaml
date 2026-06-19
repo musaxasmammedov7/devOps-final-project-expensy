@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno-policies
+  namespace: argocd
+  annotations:
+    # sync-wave: "1" — политики Kyverno применяются после готовности контроллера
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/musaxasmammedov7/devOps-final-project-expensy.git
+    targetRevision: main
+    path: gitops/kyverno/policies
+  destination:
+    server: https://kubernetes.default.svc
+    # ClusterPolicy — это cluster-scoped ресурс, но Argo CD требует указать
+    # какой-то namespace в destination для хранения метаданных синхронизации.
+    namespace: kyverno
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

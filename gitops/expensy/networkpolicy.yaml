@@ -1,0 +1,148 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: expensy
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: expensy
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-istio-control-plane-egress
+  namespace: expensy
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    # КРИТИЧНО: Envoy sidecar (istio-proxy), автоматически инжектируемый в каждый Pod благодаря istio-injection: enabled на namespace, должен непрерывно общаться с istiod в namespace istio-system на портах 15012 (XDS), 15010 (legacy XDS gRPC) и 15014 (Pilot debug/monitoring). Без этого правила Envoy sidecar не получит конфигурацию маршрутизации от control plane, и поды зависнут — readinessProbe будет фейлить бесконечно, даже если основной контейнер приложения полностью здоров. Разрешаем ВЕСЬ egress на istio-system (не точечные порты), потому что набор служебных портов Istio может отличаться между версиями — широкое правило надёжнее, чем хардкодить список портов, который может стать неактуальным после обновления Istio.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-backend
+  namespace: expensy
+spec:
+  podSelector:
+    matchLabels:
+      app: expensy-backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: expensy-frontend
+      ports:
+        - protocol: TCP
+          port: 8706
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-mongo
+  namespace: expensy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: expensy-mongo
+  policyTypes:
+    - Ingress
+  ingress:
+    # ПРОВЕРИТЬ ПОСЛЕ ДЕПЛОЯ: Bitnami chart использует свою систему labels (app.kubernetes.io/name, app.kubernetes.io/instance), которая может отличаться от ожидаемой в зависимости от версии чарта. Выполнить kubectl get pods -n expensy --show-labels после того, как MongoDB Pod поднимется, и сверить с selector в этом файле — поправить вручную при несовпадении.
+    - from:
+        - podSelector:
+            matchLabels:
+              app: expensy-backend
+      ports:
+        - protocol: TCP
+          port: 27017
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-redis
+  namespace: expensy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: expensy-redis
+  policyTypes:
+    - Ingress
+  ingress:
+    # ПРОВЕРИТЬ ПОСЛЕ ДЕПЛОЯ: Bitnami chart использует свою систему labels (app.kubernetes.io/name, app.kubernetes.io/instance), которая может отличаться от ожидаемой в зависимости от версии чарта. Выполнить kubectl get pods -n expensy --show-labels после того, как Redis Pod поднимется, и сверить с selector в этом файле — поправить вручную при несовпадении.
+    - from:
+        - podSelector:
+            matchLabels:
+              app: expensy-backend
+      ports:
+        - protocol: TCP
+          port: 6379
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-istio-ingress-to-frontend
+  namespace: expensy
+spec:
+  podSelector:
+    matchLabels:
+      app: expensy-frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+      ports:
+        - protocol: TCP
+          port: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-istio-ingress-to-backend
+  namespace: expensy
+spec:
+  podSelector:
+    matchLabels:
+      app: expensy-backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+      ports:
+        - protocol: TCP
+          port: 8706

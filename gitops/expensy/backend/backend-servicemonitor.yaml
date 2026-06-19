@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: expensy-backend-monitor
+  namespace: expensy
+  labels:
+    release: prometheus-grafana
+spec:
+  selector:
+    matchLabels:
+      app: expensy-backend
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s 
+# Backend должен экспортировать Prometheus метрики на этом пути через библиотеку prom-client — если такого эндпоинта нет в коде Express приложения, нужно добавить его вручную. Этот ServiceMonitor сам по себе не создаёт метрики, только говорит Prometheus, откуда их забирать.

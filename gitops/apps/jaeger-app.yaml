@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jaeger
+  namespace: argocd
+  annotations:
+    # sync-wave: "1" — jaeger устанавливается во второй волне
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  sources:
+    - repoURL: https://jaegertracing.github.io/helm-charts
+      chart: jaeger
+      targetRevision: 3.0.0
+      helm:
+        valueFiles:
+          - $values/gitops/observability/jaeger/values.yaml
+    - repoURL: https://github.com/musaxasmammedov7/devOps-final-project-expensy.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://github.com/musaxasmammedov7/devOps-final-project-expensy.git
+      targetRevision: main
+      path: gitops/observability/jaeger
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: expensy-certificate
+  namespace: istio-system
+spec:
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+  commonName: expensy.local
+  dnsNames:
+    - expensy.local
+    - "*.ngrok-free.app"
+    - "*.tcp.ngrok.io"
+    - security-duly-outrage.ngrok-free.dev # Added for compatibility, though ngrok TCP doesn't parse hostnames in TLS headers
+  secretName: expensy-tls-cert

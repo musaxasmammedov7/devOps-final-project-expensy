@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://www.schemastore.org/any.json
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Disallow Latest Tag
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Запрещает использование тега :latest или отсутствие тега вообще (когда тег/дайджест
+      не указаны явно) для контейнеров в namespace expensy. Требуется явный неизменяемый тег или дайджест.
+spec:
+  # validationFailureAction установлен в Audit для логирования нарушений без блокировки деплоя.
+  # После проверки существующих манифестов можно переключить на Enforce.
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: require-image-tag
+      # Проверка, что у образа контейнера указан явный тег или дайджест (наличие двоеточия или символа @)
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - expensy
+      validate:
+        message: >-
+          Ошибка: Для образа контейнера в namespace expensy не указан явный тег или дайджест.
+          Необходимо указать конкретный тег версии (например, Git SHA из CI пайплайна)
+          или дайджест (digest) в формате image:tag или image@sha256:digest.
+        pattern:
+          spec:
+            containers:
+              - image: "*:*"
+    - name: validate-image-tag
+      # Проверка, что образ не использует мутабельный тег :latest
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - expensy
+      validate:
+        message: >-
+          Ошибка: Использование тега :latest запрещено для образов в namespace expensy.
+          Пожалуйста, используйте стабильный и неизменяемый тег (например, Git SHA из CI пайплайна)
+          или дайджест образа.
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest"

@@ -1,0 +1,33 @@
+# Helm values for kube-prometheus-stack
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    # Allows Prometheus to discover ServiceMonitors in other namespaces (like istio-system and expensy)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorNamespaceSelector: {}
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+
+grafana:
+  # Placeholder password - replace with Vault-managed secret or secret reference later
+  adminPassword: "admin" # FIXME: Replace with Vault-managed secret after Vault integration
+  
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL # Search for configmaps in all namespaces with label grafana_dashboard
+  
+  # Configure Loki datasource automatically in Grafana
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki-stack.monitoring.svc.cluster.local:3100
+      version: 1
+      isDefault: false

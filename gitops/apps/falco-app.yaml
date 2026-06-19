@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://www.schemastore.org/any.json
+#
+# Argo CD Application для Falco (runtime security) + Falcosidekick (alert routing).
+#
+# Falco отслеживает системные вызовы (syscalls) контейнеров в реальном времени
+# и генерирует алерты при подозрительном поведении (shell в контейнере,
+# чтение /etc/shadow, подключение к C2-серверу и т.д.).
+#
+# Falcosidekick — это маршрутизатор алертов, встроенный в чарт Falco как subchart.
+# Мы используем его для форвардинга алертов на Gmail через SMTP.
+#
+# ВАЖНО: Falcosidekick НЕ разворачивается отдельным Argo CD Application —
+# он включается через falcosidekick.enabled: true в values.yaml чарта Falco.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: falco
+  namespace: argocd
+  annotations:
+    # sync-wave: "2" — Falco разворачивается после Kyverno и ESO
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  sources:
+    # 1) Helm chart Falco из официального репозитория falcosecurity.
+    - repoURL: https://falcosecurity.github.io/charts
+      chart: falco
+      # ВАЖНО: проверить актуальность версии на момент установки.
+      # Текущая стабильная версия: 9.1.0 (июнь 2026).
+      targetRevision: 9.1.0
+      helm:
+        valueFiles:
+          - $values/gitops/falco/values.yaml
+    # 2) Ссылка на Git-репозиторий для подгрузки values.yaml.
+    - repoURL: https://github.com/musaxasmammedov7/devOps-final-project-expensy.git
+      targetRevision: main
+      ref: values
+    # 3) Дополнительные raw-манифесты (SMTP Secret и др.) из gitops/falco/.
+    #    Kustomization.yaml в этой директории указывает, какие файлы применять.
+    - repoURL: https://github.com/musaxasmammedov7/devOps-final-project-expensy.git
+      targetRevision: main
+      path: gitops/falco
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: falco
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # Создать namespace falco автоматически, если его ещё нет.
+      - CreateNamespace=true
+      # ServerSideApply нужен для больших CRD (Falco rules и др.).
+      - ServerSideApply=true

@@ -1,0 +1,10 @@
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: jaeger-telemetry
+  namespace: istio-system
+spec:
+  tracing:
+    - providers:
+        - name: opentelemetry # OpenTelemetry provider pointing to jaeger-collector.monitoring.svc.cluster.local:4317
+      randomSamplingPercentage: 100.0 # 100% sampling for lab environment. In production, this should be 1-5% to avoid high storage/CPU costs.

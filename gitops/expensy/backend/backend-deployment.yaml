@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: expensy-backend
+  namespace: expensy
+  labels:
+    app: expensy-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: expensy-backend
+  template:
+    metadata:
+      labels:
+        app: expensy-backend
+    spec:
+      serviceAccountName: expensy-backend-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - expensy-backend
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: backend
+          # CI updates this tag automatically via commit
+          image: docker.io/mmusa7/expensy-backend:latest
+          ports:
+            - containerPort: 8706
+              name: http
+          envFrom:
+            - configMapRef:
+                name: expensy-backend-config
+            - secretRef:
+                name: expensy-backend-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+          # ВАЖНО: этот readinessProbe ожидает, что в коде Express приложения
+          # (expensy_backend/) реализован роут app.get('/health', (req, res) =>
+          # res.status(200).send('OK')) или аналогичный. Если такого роута нет —
+          # Pod никогда не перейдёт в Ready (или уйдёт в CrashLoopBackOff, если
+          # используется livenessProbe), и Service не будет направлять трафик на
+          # этот Pod. Это нужно физически дописать в код backend разработчиком —
+          # манифесты Kubernetes сами этот эндпоинт не создают.
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8706
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8706
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
