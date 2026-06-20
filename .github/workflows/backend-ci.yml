@@ -10,6 +10,8 @@ on:
     paths:
       - "expensy_backend/**"
 
+  workflow_dispatch:
+
 env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/expensy-backend
 
