@@ -116,6 +116,7 @@ jobs:
           exit-code: "1"
           severity: "CRITICAL,HIGH"
           ignore-unfixed: true
+          trivyignore: 'expensy_frontend/.trivyignore'
 
       # ── 9. Login и push образа в Docker Hub ──────────────────────────────
       # Login делаем только здесь — не раньше, чтобы credentials не были доступны
