@@ -4,7 +4,7 @@ FROM --platform=linux/amd64 node:20-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # ── Stage 2: build ────────────────────────────────────────────────────────────
 FROM --platform=linux/amd64 node:20-alpine AS builder
