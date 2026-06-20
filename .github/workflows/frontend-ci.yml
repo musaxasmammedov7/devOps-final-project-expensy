@@ -40,6 +40,12 @@ jobs:
         
 
       # ── 3. Snyk dependency scan ───────────────────────────────────────────
+
+      # 1. Сначала обязательно устанавливаем зависимости фронтенда
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: expensy_frontend
+        
       - name: Snyk – Scan dependencies
         uses: snyk/actions/node@master
         with:
