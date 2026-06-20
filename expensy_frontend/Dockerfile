@@ -1,5 +1,5 @@
 # ── Stage 1: dependencies ─────────────────────────────────────────────────────
-FROM --platform=linux/amd64 node:20-alpine AS deps
+FROM node:20-bookworm-slim AS deps
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --legacy-peer-deps
 
 # ── Stage 2: build ────────────────────────────────────────────────────────────
-FROM --platform=linux/amd64 node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -19,9 +19,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
 
-# ── Stage 3: runtime (distroless) ─────────────────────────────────────────────
-# gcr.io/distroless/nodejs20-debian12 works for Next.js standalone output
-FROM --platform=linux/amd64 gcr.io/distroless/nodejs20-debian12
+# ── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM node:20-bookworm-slim
+
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -35,6 +38,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
+RUN chown -R node:node /app
+
+USER node
+
 EXPOSE 3000
 
-CMD ["server.js"]
+CMD ["node", "server.js"]

@@ -1,5 +1,5 @@
 # ── Stage 1: build ────────────────────────────────────────────────────────────
-FROM --platform=linux/amd64 node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -15,8 +15,12 @@ RUN npm run build
 # Prune dev dependencies so only production deps remain
 RUN npm prune --production
 
-# ── Stage 2: runtime (distroless) ─────────────────────────────────────────────
-FROM --platform=linux/amd64 gcr.io/distroless/nodejs20-debian12
+# ── Stage 2: runtime ─────────────────────────────────────────────────────────
+FROM node:20-bookworm-slim
+
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -25,7 +29,10 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 
-EXPOSE 3000
+RUN chown -R node:node /app
 
-# distroless nodejs image entrypoint expects the script path as CMD
-CMD ["dist/server.js"]
+USER node
+
+EXPOSE 8706
+
+CMD ["node", "dist/server.js"]
