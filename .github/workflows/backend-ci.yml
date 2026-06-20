@@ -51,7 +51,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      # ── 4. Setup Node & install + build ───────────────────────────────────
+      # ── 4. Setup Node & install + build- ───────────────────────────────────
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
