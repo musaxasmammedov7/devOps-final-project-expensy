@@ -9,7 +9,6 @@ on:
     branches: [main]
     paths:
       - "expensy_frontend/**"
-
   workflow_dispatch:
 
 env:
@@ -20,41 +19,23 @@ jobs:
     name: Build · Scan · Push · Sign
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # needed to commit gitops manifest update
-      id-token: write   # needed for Cosign keyless (not used here, but good practice)
+      contents: write  # нужно для коммита обновлённого GitOps манифеста
+      id-token: write  # нужно для Cosign
 
     steps:
       # ── 1. Checkout ───────────────────────────────────────────────────────
+      # fetch-depth: 0 — полная история нужна SonarCloud для корректного анализа.
+      # Без этого SonarCloud не видит изменения относительно base branch.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # full history needed by SonarCloud
+          fetch-depth: 0
 
-      # -- 2. SonarCloud
-     
-      - name: Analyze with SonarCloud
-        uses: SonarSource/sonarcloud-github-action@master
-        with:
-          projectBaseDir: expensy_frontend
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        
-
-      # ── 3. Snyk dependency scan ───────────────────────────────────────────
-
-      - name: Install Frontend Dependencies
-        run: npm ci --legacy-peer-deps
-        working-directory: expensy_frontend
-        
-      - name: Snyk – Scan dependencies
-        uses: snyk/actions/node@master
-        with:
-          args: --file=expensy_frontend/package.json --severity-threshold=high
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-      # ── 4. Setup Node & install + build ───────────────────────────────────
+      # ── 2. Setup Node.js ──────────────────────────────────────────────────
+      # Делаем ПЕРВЫМ перед любой npm командой — настраивает:
+      # - нужную версию Node (20) вместо дефолтной Node 24 на runner'е
+      # - кэш npm по package-lock.json (ускоряет последующие запуски в ~3x)
+      # - добавляет node/npm в PATH runner'а
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -62,33 +43,71 @@ jobs:
           cache: "npm"
           cache-dependency-path: expensy_frontend/package-lock.json
 
+      # ── 3. Install dependencies ───────────────────────────────────────────
+      # npm ci — строгая установка строго по package-lock.json (воспроизводимо).
+      # --legacy-peer-deps нужен из-за конфликтов peer dependencies в Next.js экосистеме.
+      # Устанавливаем ОДИН РАЗ — Snyk, build и Trivy используют эти же node_modules.
       - name: Install dependencies
         working-directory: expensy_frontend
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
+      # ── 4. SonarCloud — статический анализ кода ───────────────────────────
+      # Анализирует качество кода: баги, code smells, дублирование, покрытие.
+      # Требует SONAR_TOKEN в GitHub Secrets и настроенного проекта на sonarcloud.io.
+      - name: SonarCloud – Code analysis
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          projectBaseDir: expensy_frontend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # ── 5. Snyk — сканирование зависимостей ──────────────────────────────
+      # Проверяет node_modules на известные CVE уязвимости.
+      # Использует уже установленные node_modules из шага 3 — повторный npm ci не нужен.
+      # exit-code встроен в severity-threshold — падает только на HIGH и выше.
+      - name: Snyk – Scan dependencies
+        uses: snyk/actions/node@master
+        with:
+          args: --file=expensy_frontend/package.json --severity-threshold=high
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      # ── 6. Build (Next.js) ────────────────────────────────────────────────
+      # Собираем production build перед сборкой Docker образа.
+      # NEXT_TELEMETRY_DISABLED отключает телеметрию Next.js в CI.
       - name: Build (Next.js)
         working-directory: expensy_frontend
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
-      # ── 5. Docker build ───────────────────────────────────────────────────
+      # ── 7. Docker build (без push) ────────────────────────────────────────
+      # Собираем образ локально с load: true — он доступен только на этом runner'е.
+      # push: false — не пушим в registry до прохождения Trivy сканирования.
+      # platforms: linux/amd64 — явно указываем архитектуру, важно для Mac с Apple Silicon:
+      # локальная разработка идёт на arm64, но кластер Kind использует amd64.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Build Docker image (local, no push)
         id: docker_build
         uses: docker/build-push-action@v6
         with:
           context: expensy_frontend
           file: expensy_frontend/Dockerfile
           platforms: linux/amd64
-          push: false   # push happens after Trivy scan
+          push: false
           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          load: true    # load into local daemon for Trivy
+          load: true
 
-      # ── 6. Trivy image scan ───────────────────────────────────────────────
-      - name: Trivy – Scan image
+      # ── 8. Trivy — сканирование образа ────────────────────────────────────
+      # Сканирует собранный Docker образ на CVE уязвимости в OS-пакетах и зависимостях.
+      # exit-code: 1 — пайплайн падает при нахождении CRITICAL или HIGH уязвимостей.
+      # ignore-unfixed: true — игнорируем уязвимости без доступного фикса
+      # (иначе пайплайн будет падать из-за проблем, которые ты не можешь исправить).
+      # Образ пушится в registry ТОЛЬКО если Trivy прошёл — нет смысла подписывать уязвимый образ.
+      - name: Trivy – Scan Docker image
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: "${{ env.IMAGE_NAME }}:${{ github.sha }}"
@@ -97,14 +116,16 @@ jobs:
           severity: "CRITICAL,HIGH"
           ignore-unfixed: true
 
-      # ── 7. Login to Docker Hub & push image ───────────────────────────────
+      # ── 9. Login и push образа в Docker Hub ──────────────────────────────
+      # Login делаем только здесь — не раньше, чтобы credentials не были доступны
+      # в шагах до Trivy (принцип минимальных прав в CI).
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push Docker image
+      - name: Push Docker image to Docker Hub
         id: docker_push
         uses: docker/build-push-action@v6
         with:
@@ -114,7 +135,13 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      # ── 8. Install Cosign & sign image ────────────────────────────────────
+      # ── 10. Cosign — криптографическая подпись образа ─────────────────────
+      # Подписываем образ приватным ключом (key-based signing).
+      # Подпись привязывается к digest образа (SHA256), не к тегу —
+      # тег можно переписать, digest неизменен.
+      # COSIGN_PRIVATE_KEY и COSIGN_PASSWORD берутся из GitHub Secrets
+      # (сгенерированы bootstrap-скриптом через cosign generate-key-pair).
+      # Kyverno в кластере будет проверять эту подпись перед запуском Pod'а.
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
 
@@ -127,34 +154,32 @@ jobs:
           cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
             "${{ env.IMAGE_NAME }}@${IMAGE_DIGEST}"
 
-      # ── 9. Update GitOps manifest ─────────────────────────────────────────
+      # ── 11. Обновление GitOps манифеста ───────────────────────────────────
+      # После успешного push и подписи коммитим новый тег образа в манифест.
+      # Argo CD увидит изменение в gitops/ и автоматически задеплоит новую версию.
+      # git pull --rebase защищает от race condition если backend CI
+      # коммитит одновременно с frontend CI.
       - name: Update image tag in GitOps manifest
         env:
           GIT_SHA: ${{ github.sha }}
-          MANIFEST: gitops/expensy/frontend/frontend-deployment.yaml # для бэка смени на backend-deployment.yaml
+          MANIFEST: gitops/expensy/frontend/frontend-deployment.yaml
         run: |
           if [ ! -f "$MANIFEST" ]; then
             echo "::warning::$MANIFEST not found — skipping GitOps update."
             exit 0
           fi
 
-          # Обновляем тег образа в манифесте
           sed -i "s|image: ${{ env.IMAGE_NAME }}:.*|image: ${{ env.IMAGE_NAME }}:${GIT_SHA}|g" "$MANIFEST"
 
-          # Настраиваем системного бота Git
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           git add "$MANIFEST"
-          
-          # Если изменений нет (например, повторный запуск джобы), выходим без ошибки
+
           git diff --cached --quiet && echo "No changes to commit" && exit 0
-          
+
           git commit -m "chore(gitops): update frontend image to ${GIT_SHA}"
-          
-          # Защита от Race Condition: делаем pull с ребейзом перед пушем.
-          # Если в это время засинкался бэкенд, мы просто аккуратно встанем поверх его коммита.
+
           git pull --rebase origin main
-          
-          # Пушим изменения обратно в репозиторий
+
           git push origin main
