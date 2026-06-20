@@ -38,6 +38,12 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN2 }}
 
       # ── 3. Snyk dependency scan ───────────────────────────────────────────
+      
+      # 1. Сначала обязательно устанавливаем зависимости фронтенда
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: expensy_backend
+      
       - name: Snyk – Scan dependencies
         uses: snyk/actions/node@master
         with:
