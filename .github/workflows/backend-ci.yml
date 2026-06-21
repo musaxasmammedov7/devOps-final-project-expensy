@@ -30,7 +30,20 @@ jobs:
         with:
           fetch-depth: 0   # full history needed by SonarCloud
 
-      # ── 2. SonarCloud scan ────────────────────────────────────────────────
+      # ── 2. Setup Node.js ──────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: expensy_backend/package-lock.json
+
+      # ── 3. Install dependencies ───────────────────────────────────────────
+      - name: Install dependencies
+        working-directory: expensy_backend
+        run: npm ci
+
+      # ── 4. SonarCloud scan ────────────────────────────────────────────────
       - name: Analyze with SonarCloud
         uses: SonarSource/sonarcloud-github-action@master
         with:
@@ -39,13 +52,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN2 }}
 
-      # ── 3. Snyk dependency scan ───────────────────────────────────────────
-      
-      # 1. Сначала обязательно устанавливаем зависимости фронтенда
-      - name: Install Backend Dependencies
-        run: npm ci --legacy-peer-deps
-        working-directory: expensy_backend
-      
+      # ── 5. Snyk dependency scan ───────────────────────────────────────────
       - name: Snyk – Scan dependencies
         uses: snyk/actions/node@master
         with:
@@ -53,23 +60,11 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      # ── 4. Setup Node & install + build- ───────────────────────────────────
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: expensy_backend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: expensy_backend
-        run: npm ci
-
       - name: Build (TypeScript → dist/)
         working-directory: expensy_backend
         run: npm run build
 
-      # ── 5. Docker build ───────────────────────────────────────────────────
+      # ── 6. Docker build ───────────────────────────────────────────────────
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -84,7 +79,7 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           load: true    # load into local daemon for Trivy
 
-      # ── 6. Trivy image scan ───────────────────────────────────────────────
+      # ── 7. Trivy image scan ───────────────────────────────────────────────
       - name: Trivy – Scan image
         uses: aquasecurity/trivy-action@master
         with:
@@ -94,7 +89,7 @@ jobs:
           severity: "CRITICAL,HIGH"
           ignore-unfixed: true
 
-      # ── 7. Login to Docker Hub & push image ───────────────────────────────
+      # ── 8. Login to Docker Hub & push image ───────────────────────────────
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -111,7 +106,7 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      # ── 8. Install Cosign & sign image ────────────────────────────────────
+      # ── 9. Install Cosign & sign image ────────────────────────────────────
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
 
@@ -124,7 +119,7 @@ jobs:
           cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
             "${{ env.IMAGE_NAME }}@${IMAGE_DIGEST}"
 
-      # ── 9. Update GitOps manifest ─────────────────────────────────────────
+      # ── 10. Update GitOps manifest ────────────────────────────────────────
       - name: Update image tag in GitOps manifest
         env:
           GIT_SHA: ${{ github.sha }}
