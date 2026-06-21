@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/expensy-frontend
+  IMAGE_NAME: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/expensy-frontend
 
 jobs:
   ci:

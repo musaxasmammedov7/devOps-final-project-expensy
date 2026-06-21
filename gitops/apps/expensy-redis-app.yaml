@@ -4,8 +4,8 @@ metadata:
   name: expensy-redis
   namespace: argocd
   annotations:
-    # sync-wave: "2" — redis разворачивается в третьей волне
-    argocd.argoproj.io/sync-wave: "2"
+    # sync-wave: "3" — redis разворачивается после синхронизации ExternalSecret
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   project: default
   sources:

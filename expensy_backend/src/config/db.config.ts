@@ -15,7 +15,6 @@ const connectDB = async () => {
   try {
     await mongoose.connect(process.env.DATABASE_URI!, {
     });
-    console.log('DATABASE_URI:', process.env.DATABASE_URI);
     console.log('MongoDB connected');
     mongoConnectionGauge.set(1); // Set gauge to 1 on successful connection
   } catch (error) {

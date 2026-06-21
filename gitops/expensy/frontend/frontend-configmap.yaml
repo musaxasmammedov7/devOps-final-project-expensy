@@ -4,4 +4,4 @@ metadata:
   name: expensy-frontend-config
   namespace: expensy
 data:
-  NEXT_PUBLIC_API_URL: "https://security-duly-outrage.ngrok-free.dev/api"
+  NEXT_PUBLIC_API_URL: "https://security-duly-outrage.ngrok-free.dev"

@@ -35,4 +35,7 @@ spec:
             - entries:
                 - keys:
                     publicKeys: |
-                      <ВСТАВИТЬ_СОДЕРЖИМОЕ_cosign.pub>
+                      -----BEGIN PUBLIC KEY-----
+                      MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzQ4A50AOMMd5VE6HlDt/D1GRkpXq
+                      GJKsQTf+vaFLo+kuTJXyBT2pDdZ9P234MkAYl6b6x75HATX9QvhpOHh3Xw==
+                      -----END PUBLIC KEY-----

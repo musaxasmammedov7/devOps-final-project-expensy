@@ -4,8 +4,8 @@ metadata:
   name: expensy-mongodb
   namespace: argocd
   annotations:
-    # sync-wave: "2" — mongodb разворачивается в третьей волне
-    argocd.argoproj.io/sync-wave: "2"
+    # sync-wave: "3" — mongodb разворачивается после синхронизации ExternalSecret
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   project: default
   sources:
