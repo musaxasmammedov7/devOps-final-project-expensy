@@ -60,6 +60,10 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
+      - name: Test (unit)
+        working-directory: expensy_backend
+        run: npm test
+
       - name: Build (TypeScript → dist/)
         working-directory: expensy_backend
         run: npm run build

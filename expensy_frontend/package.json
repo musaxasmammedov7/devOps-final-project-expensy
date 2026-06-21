@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "npm run build && next start",
-    "lint": "next lint",
+    "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "next lint --fix",
     "preview": "next build && next start",
     "typecheck": "tsc --noEmit",

@@ -73,6 +73,14 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
+      - name: Typecheck
+        working-directory: expensy_frontend
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: expensy_frontend
+        run: npm run lint
+
       # ── 6. Build (Next.js) ────────────────────────────────────────────────
       # Собираем production build перед сборкой Docker образа.
       # NEXT_TELEMETRY_DISABLED отключает телеметрию Next.js в CI.
