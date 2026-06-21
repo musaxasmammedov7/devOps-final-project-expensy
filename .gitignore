@@ -1,6 +1,17 @@
-
+# ── Секреты и ключи (НЕ УДАЛЯТЬ) ──
 k8s/secrets.yml
 gitops/external-secrets/azure-sp-secret.yaml
-
 # Cosign private key — NEVER commit this
 gitops/argocd/cosign.key
+
+# ── Зависимости и билды (Фикс зависания Git) ──
+# Двойная звездочка (**/) игнорирует эти папки ВЕЗДЕ в проекте
+**/node_modules/
+**/dist/
+**/build/
+**/.next/
+**/out/
+
+# ── Инфраструктура и локальные данные кластера ──
+expensy-data/
+*.log
