@@ -4,6 +4,26 @@ gitops/external-secrets/azure-sp-secret.yaml
 # Cosign private key — NEVER commit this
 gitops/argocd/cosign.key
 
+# ── Terraform (НЕ УДАЛЯТЬ) ──
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate*
+terraform/.tfvars
+terraform/terraform.tfvars
+terraform/crash.log
+terraform/crash.*.log
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/**/.terraform/
+# Local .terraform directories
+**/.terraform/*
+# .tfstate files
+*.tfstate
+*.tfstate.*
+# Crash log files
+crash.log
+crash.*.log
+
 # ── Зависимости и билды (Фикс зависания Git) ──
 # Двойная звездочка (**/) игнорирует эти папки ВЕЗДЕ в проекте
 **/node_modules/
